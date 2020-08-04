@@ -495,14 +495,14 @@ int main( int argc, const char** argv )
     cv::Size image_size(im.cols, im.rows);
     float apertures[2] = { X_APERTURE, Y_APERTURE };
     std::vector<Projection> projections;
-    float lambda, phi_full;
-
     cout << "Compiling detectors" << endl;
 
-    for (phi_full = 0; phi_full < M_PI; phi_full += Y_STEP) {
-      for (lambda = 0; lambda < 2*M_PI; lambda += X_STEP) {
-          /* Calculate a phi (vertical tilt) from -M_PI/2 to M_PI/2 */
-          float phi = phi_full <= M_PI/2 ? phi_full : phi_full - M_PI;
+    #pragma omp parallel for
+    for (int phi_step = 0; phi_step < (int)(M_PI/Y_STEP); phi_step++) {
+      float phi_full = phi_step * Y_STEP;
+      /* Calculate a phi (vertical tilt) from -M_PI/2 to M_PI/2 */
+      float phi = phi_full <= M_PI/2 ? phi_full : phi_full - M_PI;
+      for (float lambda = 0; lambda < 2*M_PI; lambda += X_STEP) {
 
           PCN *detector = new PCN(models_dir + "/PCN.caffemodel",
                  models_dir + "/PCN-1.prototxt",

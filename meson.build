@@ -12,6 +12,8 @@ if not dep_opencv.found()
         dep_opencv = dependency('opencv')
 endif
 
+dep_openmp = dependency('openmp', required: false, language: 'cpp')
+
 MODELS_DATADIR=join_paths(get_option('datadir'), 'blur360', 'models')
 
 conf_data = configuration_data()
