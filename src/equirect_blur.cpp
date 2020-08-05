@@ -12,14 +12,14 @@ using namespace cv;
 
 /* Step around the sphere in overlapping ranges. Bands of 90deg vert (45deg at a time),
  * 360deg horizontal (180deg at a time) */
-#define X_APERTURE (2*M_PI)
-#define Y_APERTURE (M_PI/2)
+#define X_APERTURE ((float)(2.0f*M_PI))
+#define Y_APERTURE ((float)(M_PI/2.0f))
 
-#define X_STEP (X_APERTURE/2)
-#define Y_STEP (Y_APERTURE/2)
+#define X_STEP ((float)(X_APERTURE/2.0f))
+#define Y_STEP ((float)(Y_APERTURE/2.0f))
 
-#define DEG2RAD(d) (d)*M_PI/180.0
-#define RAD2DEG(r) 180.0*(r)/M_PI
+#define DEG2RAD(d) (d)*M_PI/180.0f
+#define RAD2DEG(r) 180.0f*(r)/M_PI
 
 #define ABS(x) ((x) < 0 ? -(x) : (x))
 
@@ -110,8 +110,8 @@ private:
         int x, y;
         int in_width = this->equ_size.width;
         int in_height = this->equ_size.height;
-        int tmp_width = in_width*this->cropped_aperture[0]/(2*M_PI);
-        int tmp_height = in_height*this->cropped_aperture[1]/M_PI;
+        int tmp_width = (int)round(in_width*this->cropped_aperture[0]/(2*M_PI));
+        int tmp_height = (int)round(in_height*this->cropped_aperture[1]/M_PI);
 
         double u,v;
 
@@ -158,14 +158,14 @@ create_roi_map_to_equ(Projection &projection, Mat &image, Mat &tmp_image, cv::Re
     cv::Mat e2pRot = projection.p2eRot.t();
 
     /* Offset for cropped image x/y */
-    float x_offset = -(in_width-tmp_width)/2;
-    float y_offset = -(in_height-tmp_height)/2;
+    int x_offset = -(in_width-tmp_width)/2;
+    int y_offset = -(in_height-tmp_height)/2;
 
     for (y = 0; y < roi.height; y++) {
       for (x = 0; x < roi.width; x++) {
           /* Calculate the U/V lat/long of the ROI pixel in the source frame */
-          double x_h = (double)(x + roi.x) / (in_width-1) - 0.5;
-          double y_h = (double)(y + roi.y) / (in_height-1) - 0.5;
+          float x_h = (float)(x + roi.x) / (in_width-1) - 0.5;
+          float y_h = (float)(y + roi.y) / (in_height-1) - 0.5;
 
           /* Convert to radians */
           v = x_h * 2*M_PI + M_PI;
@@ -211,18 +211,19 @@ blur_face(Projection &projection, cv::Mat img, Window face, bool draw_over_faces
     float angle_rad = DEG2RAD(face.angle);
     float dst_size = (face.width + 2 * face_padding);
     float rot_size = dst_size * (ABS(sin(angle_rad)) + ABS(cos(angle_rad)));
+    int dst_size_pixels = (int)(ceil(dst_size));
 
     cv::Point2f srcTriangle[4]; /* 4th vertex is just for debug */
     cv::Point2f dstTriangle[4]; /* 4th vertex is just for debug */
 
-    srcTriangle[0] = RotatePoint(x1, y1, centerX, centerY, face.angle);
-    srcTriangle[1] = RotatePoint(x1, y2, centerX, centerY, face.angle);
-    srcTriangle[2] = RotatePoint(x2, y2, centerX, centerY, face.angle);
-    srcTriangle[3] = RotatePoint(x2, y1, centerX, centerY, face.angle);
+    srcTriangle[0] = RotatePoint(x1, y1, centerX, centerY, (float)face.angle);
+    srcTriangle[1] = RotatePoint(x1, y2, centerX, centerY, (float)face.angle);
+    srcTriangle[2] = RotatePoint(x2, y2, centerX, centerY, (float)face.angle);
+    srcTriangle[3] = RotatePoint(x2, y1, centerX, centerY, (float)face.angle);
     dstTriangle[0] = cv::Point(0, 0);
-    dstTriangle[1] = cv::Point(0, dst_size - 1);
-    dstTriangle[2] = cv::Point(dst_size - 1, dst_size - 1);
-    dstTriangle[3] = cv::Point(dst_size - 1, 0);
+    dstTriangle[1] = cv::Point(0, dst_size_pixels - 1);
+    dstTriangle[2] = cv::Point(dst_size_pixels - 1, dst_size_pixels - 1);
+    dstTriangle[3] = cv::Point(dst_size_pixels - 1, 0);
 
     // cout << "Face x " << face.x << " y " << face.y << " angle " << face.angle << " (rad " << angle_rad << ") w " << face.width << " size " << rot_size << endl;
 
@@ -245,14 +246,16 @@ blur_face(Projection &projection, cv::Mat img, Window face, bool draw_over_faces
       min_x = srcTriangle[2].x;
       min_y = srcTriangle[1].y;
     }
-    float max_x = min_x + rot_size;
-    float max_y = min_y + rot_size;
+    int max_x_pix = (int)ceil(min_x + rot_size);
+    int max_y_pix= (int)ceil(min_y + rot_size);
+    int min_x_pix = (int)floor(min_x);
+    int min_y_pix = (int)floor(min_y);
 
     /* Calculate ROI to extract from the main image */
-    min_x = CLAMP (min_x, 0.0, img.cols-1);
-    max_x = CLAMP (max_x, 0.0, img.cols-1);
-    min_y = CLAMP (min_y, 0.0, img.rows-1);
-    max_y = CLAMP (max_y, 0.0, img.rows-1);
+    min_x_pix = CLAMP (min_x_pix, 0, img.cols-1);
+    max_x_pix = CLAMP (max_x_pix, 0, img.cols-1);
+    min_y_pix = CLAMP (min_y_pix, 0, img.rows-1);
+    max_y_pix = CLAMP (max_y_pix, 0, img.rows-1);
 
     for (int i = 0; i < 4; i++) {
         //cout << "Face quad " << i << " x " << srcTriangle[i].x << " y " << srcTriangle[i].y << endl;
@@ -260,7 +263,7 @@ blur_face(Projection &projection, cv::Mat img, Window face, bool draw_over_faces
         srcTriangle[i].y -= min_y;
     }
 
-    cv::Rect roi = cv::Rect(min_x, min_y, max_x-min_x, max_y-min_y);
+    cv::Rect roi = cv::Rect(min_x_pix, min_y_pix, max_x_pix-min_x_pix, max_y_pix-min_y_pix);
 
     //cout << "ROI x " << roi.x << " y < " << roi.y << " w " << roi.width << " h " << roi.height << endl;
 
@@ -280,11 +283,11 @@ blur_face(Projection &projection, cv::Mat img, Window face, bool draw_over_faces
 #elif 1
     if (draw_over_faces) {
         /* Draw grey rectangle to obscure the face */
-        face_img = cv::Mat(dst_size, dst_size, img.type());
-        cv::rectangle(face_img,cv::Point(0,0),cv::Point(dst_size-1, dst_size-1),cv::Scalar(64,64,64),-1);
+        face_img = cv::Mat(dst_size_pixels, dst_size_pixels, img.type());
+        cv::rectangle(face_img,cv::Point(0,0),cv::Point(dst_size_pixels-1, dst_size_pixels-1),cv::Scalar(64,64,64),-1);
     } else {
         /* blur the face */
-        cv::warpAffine(crop_roi, face_img, rotMat, cv::Size(dst_size, dst_size));
+        cv::warpAffine(crop_roi, face_img, rotMat, cv::Size(dst_size_pixels, dst_size_pixels));
         cv::GaussianBlur(face_img, face_img, cv::Size(31, 31), 10);
     }
 #elif 0
@@ -293,7 +296,7 @@ blur_face(Projection &projection, cv::Mat img, Window face, bool draw_over_faces
 #endif
 
     /* Warp blurred/covered picture back into the source orientation */
-    cv::warpAffine(face_img, crop_roi, rotMat, cv::Size(rot_size, rot_size),
+    cv::warpAffine(face_img, crop_roi, rotMat, cv::Size(crop_roi.rows, crop_roi.cols),
             cv::WARP_INVERSE_MAP|cv::INTER_LINEAR, cv::BORDER_TRANSPARENT);
 
     //imshow("Face", crop_roi);
@@ -325,23 +328,23 @@ project_faces_to_full_frame(Projection &projection, cv::Mat &equ_image,
         srcQuad[1] = cv::Point(roi.x, roi.y + roi.height);
         srcQuad[2] = cv::Point(roi.x + roi.width, roi.y + roi.height);
         srcQuad[3] = cv::Point(roi.x + roi.width, roi.y);
-        float min_x, min_y, max_x, max_y;
+        int min_x, min_y, max_x, max_y;
 
         // cout << "Face quad: " << endl;
         for (int i = 0; i < 4; i++) {
-            float y = srcQuad[i].y;
-            float x = srcQuad[i].x;
+            int y = (int)round(srcQuad[i].y);
+            int x = (int)round(srcQuad[i].x);
 
             Vec2f p = projection.e2pMap.at<Vec2f>(y,x);
             dstQuad[i] = Point2f(p[0], p[1]);
             //cout << "  vertex " << i << " from " << x << ", " << y << " src image " << p[0] << ", " << p[1] << endl;
         }
 
-        min_x = MIN(dstQuad[0].x, dstQuad[1].x);
-        max_x = MAX(dstQuad[2].x, dstQuad[3].x);
+        min_x = (int)floor(MIN(dstQuad[0].x, dstQuad[1].x));
+        max_x = (int)ceil(MAX(dstQuad[2].x, dstQuad[3].x));
 
-        min_y = MIN(dstQuad[0].y, dstQuad[3].y);
-        max_y = MAX(dstQuad[1].y, dstQuad[2].y);
+        min_y = (int)floor(MIN(dstQuad[0].y, dstQuad[3].y));
+        max_y = (int)ceil(MAX(dstQuad[1].y, dstQuad[2].y));
 
 #if 0
         cv::line(equ_image, dstQuad[0], dstQuad[1], RED, 3);
@@ -410,8 +413,8 @@ process_frame(String output_file,
     int in_height = image.rows;
 
     /* Calculate a temporary image size that matches the target aperture */
-    int tmp_width = in_width * X_APERTURE/(2*M_PI);
-    int tmp_height = in_height * Y_APERTURE/(M_PI);
+    int tmp_width = (int)round(in_width * X_APERTURE/(2*M_PI));
+    int tmp_height = (int)round(in_height * Y_APERTURE/(M_PI));
 
     Mat tmp_image(tmp_height, tmp_width, image.type());
 
@@ -513,11 +516,11 @@ int main( int argc, const char** argv )
 
           /// detection
           detector->SetMinFaceSize(20);
-          detector->SetImagePyramidScaleFactor(1.25);
-          detector->SetDetectionThresh(0.37, 0.43, 0.85);
+          detector->SetImagePyramidScaleFactor(1.25f);
+          detector->SetDetectionThresh(0.37f, 0.43f, 0.85f);
           /// tracking
           detector->SetTrackingPeriod(30);
-          detector->SetTrackingThresh(0.9);
+          detector->SetTrackingThresh(0.9f);
           detector->SetVideoSmooth(true);
 
           Projection projection(image_size, apertures, phi, lambda, detector);
