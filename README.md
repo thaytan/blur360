@@ -19,6 +19,8 @@ At the moment, blurring and face overdrawing is supported for single images:
 ./build/src/equirect-blur -m=models -o=output.jpg Input.jpg
 ```
 
+By default, this will draw grey rectangles to completely obscure detected faces. To blur faces instead, use the `-b` command line option.
+
 ## Building
 
 Compilation requires `meson` and `OpenCV`. Depending on platform you might also need `ninja`
