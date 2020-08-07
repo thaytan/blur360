@@ -1,5 +1,6 @@
 equirect_blur_image_src = [
     'equirect_blur_image.cpp',
+    'equirect-blur-common.cpp',
     'PCN.cpp'
 ]
 
