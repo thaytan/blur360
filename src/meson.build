@@ -1,8 +1,8 @@
-equirect_blur_src = [
-    'equirect_blur.cpp',
+equirect_blur_image_src = [
+    'equirect_blur_image.cpp',
     'PCN.cpp'
 ]
 
-executable('equirect-blur', equirect_blur_src,
+executable('equirect-blur-image', equirect_blur_image_src,
   dependencies: [dep_libm, dep_opencv, dep_openmp],
   include_directories: configuration_inc)
