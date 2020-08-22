@@ -381,7 +381,9 @@ equirect_blur_process_frame(
       //cout << "Region phi=" << p.phi << " lambda=" << p.lambda << endl;
       //
       if (p.equ_size.width != image.cols || p.equ_size.height != image.rows) {
-          cerr << "Input image size mismatch" << endl;
+          cerr << "Input image size mismatch (expected " <<
+                p.equ_size.height << " x " << p.equ_size.width <<
+                " got " << image.rows << " x " << image.cols << ")" << endl;
           return false;
       }
 
@@ -398,6 +400,8 @@ equirect_blur_process_frame(
       // Extract faces and blur into the cropped image
       if (faces.size()) {
           //cout << "Detected " << faces.size() << " faces" << endl;
+          p.faces.clear();
+
           for (size_t j = 0; j < faces.size(); j++)
           {
               p.faces.push_back(blur_face(p, tmp_image, faces[j], draw_over_faces));
@@ -406,11 +410,11 @@ equirect_blur_process_frame(
           }
 
 #if 0
-          imshow("Region", tmp_image);
+          //imshow("Region", tmp_image);
           std::stringstream fname;
           fname << "img" << n << ".jpg";
           imwrite(fname.str().c_str(), tmp_image);
-          waitKey(0);
+          //waitKey(0);
 #endif
           // Project blurred areas back to the full frame
           project_faces_to_full_frame(p, image, tmp_image);

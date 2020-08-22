@@ -17,6 +17,9 @@ endif
 
 dep_openmp = dependency('openmp', required: false, language: 'cpp')
 
+dep_gst = dependency('gstreamer-1.0', required: false)
+dep_gstvideo = dependency('gstreamer-video-1.0', required: false)
+
 MODELS_DATADIR=join_paths(get_option('datadir'), 'blur360', 'models')
 
 conf_data = configuration_data()

@@ -67,6 +67,7 @@ int main( int argc, const char** argv )
 
           Projection projection(image_size, apertures, phi, lambda, detector);
 
+          #pragma omp critical
           projections.push_back(projection);
       }
     }

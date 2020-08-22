@@ -12,8 +12,14 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/dnn/dnn.hpp>
 
-#define M_PI  3.14159265358979323846
+#ifndef CLAMP
 #define CLAMP(x, l, u)  ((x) < (l) ? (l) : ((x) > (u) ? (u) : (x)))
+#endif
+
+#ifndef M_PI
+#define M_PI  3.14159265358979323846
+#endif
+
 #define EPS  1e-5
 
 #define CYAN CV_RGB(0, 255, 255)
