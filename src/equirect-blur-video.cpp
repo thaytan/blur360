@@ -31,7 +31,7 @@ static gboolean
 intr_handler (gpointer user_data)
 {
   if (blur_data.src) {
-    g_print ("Stopping. Sending EOS\n");
+    g_print ("Stopping. Sending EOS (This can take a long time while it drains queued frames)\n");
     gst_element_send_event ((GstElement *)blur_data.src, gst_event_new_eos());
   } else {
     g_print ("Stopping\n");
@@ -121,11 +121,29 @@ new_stream (GstElement *parse, GstPad * pad, struct BlurData *bd)
   if (caps) {
     GstStructure *s = gst_caps_get_structure (caps, 0);
     const gchar *stream_type = gst_structure_get_name (s);
+    GError* error = NULL;
 
     g_print ("New stream with type %s\n", stream_type);
+    /* Link all new pads through multiqueue */
+    GstElement* mq = gst_bin_get_by_name(bd->pipeline, "mq");
+    assert(mq != NULL);
+
+    GstPad* mq_sink = gst_element_get_request_pad(mq, "sink_%u");
+    gchar* sink_name = gst_pad_get_name(mq_sink);
+    gchar* src_name = g_strdup_printf("src_%s", sink_name + 5);
+    GstPad* mq_src = gst_element_get_static_pad(mq, src_name);
+    g_print("Linking stream through mq pads %s / %s\n", sink_name, src_name);
+    g_free(sink_name);
+    g_free(src_name);
+
+    if (gst_pad_link(pad, mq_sink) != GST_PAD_LINK_OK) {
+        cerr << "Error linking new stream to mq" << endl;
+        GST_ELEMENT_ERROR(bd->pipeline, LIBRARY, INIT, ("Failed to construct pipeline fragment"), (NULL));
+        goto done;
+    }
+
     if (g_str_equal (stream_type, "video/x-h264")) {
-      GError *error = NULL;
-      GstElement *blur_bin = gst_parse_bin_from_description ("avdec_h264 ! videoconvert name=video-in ! queue max-size-buffers=1 ! equirect_blur ! videoconvert ! x264enc tune=zerolatency name=enc ! h264parse", TRUE, &error);
+      GstElement *blur_bin = gst_parse_bin_from_description ("avdec_h264 ! progressreport ! videoconvert name=video-in ! queue max-size-buffers=1 ! equirect_blur ! videoconvert ! x264enc tune=zerolatency name=enc ! h264parse", TRUE, &error);
 
       if (error != NULL) {
         cerr << "Error creating GStreamer pipeline: " << error->message << endl;
@@ -138,7 +156,7 @@ new_stream (GstElement *parse, GstPad * pad, struct BlurData *bd)
       gst_bin_add (bd->pipeline, blur_bin);
 
       GstPad *sinkpad = gst_element_get_static_pad (blur_bin, "sink");
-      if (gst_pad_link (pad, sinkpad) != GST_PAD_LINK_OK) {
+      if (gst_pad_link (mq_src, sinkpad) != GST_PAD_LINK_OK) {
         cerr << "Error linking blur filter to source" << endl;
         GST_ELEMENT_ERROR (bd->pipeline, LIBRARY, INIT, ("Failed to create blurring filter"), (NULL));
         goto done;
@@ -154,8 +172,27 @@ new_stream (GstElement *parse, GstPad * pad, struct BlurData *bd)
     }
     else if (g_str_has_prefix(stream_type, "audio/")) {
       g_print ("  Trying to pass through audio stream\n");
+      GstElement* pass_bin = gst_parse_bin_from_description("identity", TRUE, &error);
+      if (error != NULL) {
+          cerr << "Error creating GStreamer pipeline: " << error->message << endl;
+          GST_ELEMENT_ERROR(bd->pipeline, LIBRARY, INIT, ("Failed to create audio filter"), (NULL));
+          g_error_free(error);
+          goto done;
+      }
+
+      gst_element_set_state(pass_bin, GST_STATE_PLAYING);
+      gst_bin_add(bd->pipeline, pass_bin);
+
+      GstPad* sinkpad = gst_element_get_static_pad(pass_bin, "sink");
+      if (gst_pad_link(mq_src, sinkpad) != GST_PAD_LINK_OK) {
+          cerr << "Error linking audio filter to source" << endl;
+          GST_ELEMENT_ERROR(bd->pipeline, LIBRARY, INIT, ("Failed to create audio filter"), (NULL));
+          goto done;
+      }
+
+      GstPad* srcpad = gst_element_get_static_pad(pass_bin, "src");
       GstPad *mux_pad = gst_element_get_request_pad (bd->mux, "audio_%u");
-      if (gst_pad_link (pad, mux_pad) != GST_PAD_LINK_OK) {
+      if (gst_pad_link (srcpad, mux_pad) != GST_PAD_LINK_OK) {
         cerr << "Error linking audio stream to muxer. Ignoring." << endl;
       }
     }
@@ -202,7 +239,7 @@ int main( int argc, char** argv )
     loop = g_main_loop_new (NULL, FALSE);
 
     GError *error = NULL;
-    GstElement *pipeline = gst_parse_launch ("filesrc name=src ! parsebin name=parse mp4mux name=mux ! filesink name=sink", &error);
+    GstElement *pipeline = gst_parse_launch ("filesrc name=src ! parsebin name=parse multiqueue use-interleave=true name=mq mp4mux name=mux ! filesink name=sink", &error);
 
     if (error != NULL) {
         cerr << "Error creating GStreamer pipeline: " << error->message << endl;

@@ -16,10 +16,17 @@ module instead of Caffe.
 At the moment, blurring and face overdrawing is supported for single images:
 
 ```
-./build/src/equirect-blur -m=models -o=output.jpg Input.jpg
+./bin/equirect-blur-image -m=models -o=output.jpg Input.jpg
+```
+
+and for some video files:
+```
+./bin/equirect-blur-video -m=models -o=output.mp4 Input.mp4
 ```
 
 By default, this will draw grey rectangles to completely obscure detected faces. To blur faces instead, use the `-b` command line option.
+
+Output encoding is fixed in the source code - JPEG for images, H.264 + mp4 for video.
 
 ## Building
 

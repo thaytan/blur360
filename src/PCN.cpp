@@ -161,6 +161,13 @@ void Impl::LoadModel(std::string modelDetect, std::string net1, std::string net2
     net_[1] = cv::dnn::readNetFromCaffe(net2.c_str(), modelDetect.c_str());
     net_[2] = cv::dnn::readNetFromCaffe(net3.c_str(), modelDetect.c_str());
     net_[3] = cv::dnn::readNetFromCaffe(netTrack.c_str(), modelTrack.c_str());
+
+#if 0
+    for (int i = 0; i < 4; i++) {
+        net_[i].setPreferableBackend(cv::dnn::DNN_BACKEND_INFERENCE_ENGINE);
+        net_[i].setPreferableTarget(cv::dnn::DNN_TARGET_OPENCL);
+    }
+#endif
 }
 
 cv::Mat Impl::PreProcessImg(cv::Mat img)
