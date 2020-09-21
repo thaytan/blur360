@@ -172,7 +172,7 @@ new_stream (GstElement *parse, GstPad * pad, struct BlurData *bd)
     }
     else if (g_str_has_prefix(stream_type, "audio/")) {
       g_print ("  Trying to pass through audio stream\n");
-      GstElement* pass_bin = gst_parse_bin_from_description("identity", TRUE, &error);
+      GstElement* pass_bin = gst_parse_bin_from_description("queue", TRUE, &error);
       if (error != NULL) {
           cerr << "Error creating GStreamer pipeline: " << error->message << endl;
           GST_ELEMENT_ERROR(bd->pipeline, LIBRARY, INIT, ("Failed to create audio filter"), (NULL));
