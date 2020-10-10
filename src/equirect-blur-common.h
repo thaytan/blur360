@@ -5,7 +5,7 @@
 /* Step around the sphere in overlapping ranges. Bands of 90deg vert (45deg at a time),
  * 360deg horizontal (180deg at a time) */
 #define X_APERTURE ((float)(2.0f*M_PI))
-#define Y_APERTURE ((float)(M_PI/2.0f))
+#define Y_APERTURE ((float)(2.0*M_PI/3.0f))
 
 #define X_STEP ((float)(X_APERTURE/2.0f))
 #define Y_STEP ((float)(Y_APERTURE/2.0f))
