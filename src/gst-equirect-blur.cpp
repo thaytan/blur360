@@ -192,8 +192,8 @@ gst_equirect_blur_prepare_projections (GstEquirectBlur *filter)
                  models_dir + "/PCN-Tracking.prototxt");
 
           /// detection
-          detector->SetMinFaceSize(20);
-          detector->SetImagePyramidScaleFactor(1.25f);
+          detector->SetMinFaceSize(32);
+          detector->SetImagePyramidScaleFactor(1.5f);
           detector->SetDetectionThresh(0.37f, 0.43f, 0.85f);
           /// tracking
           detector->SetTrackingPeriod(30);
