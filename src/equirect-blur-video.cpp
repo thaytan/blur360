@@ -19,6 +19,7 @@ struct BlurData {
 };
 
 static bool draw_over_faces;
+static bool use_opencl;
 static String models_dir;
 struct BlurData blur_data;
 
@@ -143,7 +144,7 @@ new_stream (GstElement *parse, GstPad * pad, struct BlurData *bd)
     }
 
     if (g_str_equal (stream_type, "video/x-h264")) {
-      GstElement *blur_bin = gst_parse_bin_from_description ("avdec_h264 ! progressreport ! videoconvert name=video-in ! queue max-size-buffers=1 ! equirect_blur ! videoconvert ! x264enc tune=zerolatency name=enc ! h264parse", TRUE, &error);
+      GstElement *blur_bin = gst_parse_bin_from_description ("avdec_h264 ! progressreport ! videoconvert name=video-in ! queue max-size-buffers=1 ! equirect_blur name=blur ! videoconvert ! x264enc tune=zerolatency name=enc ! h264parse", TRUE, &error);
 
       if (error != NULL) {
         cerr << "Error creating GStreamer pipeline: " << error->message << endl;
@@ -169,6 +170,9 @@ new_stream (GstElement *parse, GstPad * pad, struct BlurData *bd)
         GST_ELEMENT_ERROR (bd->pipeline, LIBRARY, INIT, ("Failed to create blurring filter"), (NULL));
         goto done;
       }
+
+      GstElement *blur = gst_bin_get_by_name(GST_BIN(blur_bin), "blur");
+      g_object_set(blur, "draw-over-faces", draw_over_faces, "use-opencl", use_opencl, NULL);
     }
     else if (g_str_has_prefix(stream_type, "audio/")) {
       g_print ("  Trying to pass through audio stream\n");
@@ -210,6 +214,7 @@ int main( int argc, char** argv )
     CommandLineParser parser(argc, argv,
                              "{help h||}"
                              "{blur b||If supplied, faces are blurred rather than hidden with rectangles}"
+                             "{opencl c||If supplied, try to use OpenCL for inference acceleration}"
                              "{models-dir m|" MODELS_DATADIR "|Path to PCN models}"
                              "{output-file o|output.mp4|Output file}"
                              "{@input-file|test.mp4|Input file}"
@@ -235,6 +240,8 @@ int main( int argc, char** argv )
 
     models_dir = parser.get<String>("models-dir");
     draw_over_faces = !parser.has("blur");
+
+    use_opencl = parser.has("opencl");
 
     loop = g_main_loop_new (NULL, FALSE);
 

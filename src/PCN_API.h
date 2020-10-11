@@ -43,7 +43,7 @@ extern "C"
                         float detection_thresh_stage2, float detection_thresh_stage3, int tracking_period,
                         float tracking_thresh, int do_smooth)
     {
-        PCN *detector = new PCN(model1,pcn1_proto,model2,pcn2_proto,model3,pcn3_proto,
+        PCN *detector = new PCN(false, model1,pcn1_proto,model2,pcn2_proto,model3,pcn3_proto,
                                 tracking_model_path,tracking_proto);
 
         /// detection

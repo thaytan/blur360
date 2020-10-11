@@ -15,7 +15,7 @@ struct Window2
 class Impl
 {
 public:
-    void LoadModel(std::string model1, std::string net1,
+    void LoadModel(bool use_opencl, std::string model1, std::string net1,
                  std::string model2, std::string net2,
                  std::string model3, std::string net3,
                  std::string modelTrack, std::string netTrack);
@@ -61,14 +61,14 @@ public:
     std::vector<Window2> m_smoothPreList;
 };
 
-PCN::PCN(std::string model1, std::string net1,
+PCN::PCN(bool use_opencl, std::string model1, std::string net1,
          std::string model2, std::string net2,
          std::string model3, std::string net3,
          std::string modelTrack, std::string netTrack) : impl_(new Impl())
 {
     Impl *p = (Impl *)impl_;
     p->m_minTrackAge = 5;
-    p->LoadModel(model1, net1, model2, net2, model3, net3, modelTrack, netTrack);
+    p->LoadModel(use_opencl, model1, net1, model2, net2, model3, net3, modelTrack, netTrack);
 }
 
 void PCN::SetVideoSmooth(bool stable)
@@ -166,7 +166,8 @@ std::vector<Window> PCN::DetectTrack(cv::Mat img)
     return p->TransWindow(img, imgPad, winList);
 }
 
-void Impl::LoadModel(std::string model1, std::string net1,
+void Impl::LoadModel(bool use_opencl,
+                     std::string model1, std::string net1,
                      std::string model2, std::string net2,
                      std::string model3, std::string net3,
                      std::string modelTrack, std::string netTrack)
@@ -177,9 +178,11 @@ void Impl::LoadModel(std::string model1, std::string net1,
     net_[3] = cv::dnn::readNet(modelTrack.c_str(), netTrack.c_str());
 
 #if 0
-    for (int i = 0; i < 4; i++) {
-        net_[i].setPreferableBackend(cv::dnn::DNN_BACKEND_INFERENCE_ENGINE);
-        net_[i].setPreferableTarget(cv::dnn::DNN_TARGET_OPENCL);
+    if (use_opencl) {
+      for (int i = 0; i < 4; i++) {
+          net_[i].setPreferableBackend(cv::dnn::DNN_BACKEND_INFERENCE_ENGINE);
+          net_[i].setPreferableTarget(cv::dnn::DNN_TARGET_OPENCL_FP16);
+      }
     }
 #endif
 }

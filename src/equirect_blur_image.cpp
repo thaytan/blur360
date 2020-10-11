@@ -50,6 +50,7 @@ int main( int argc, const char** argv )
       for (float lambda = 0; lambda < 2*M_PI; lambda += X_STEP) {
 
           PCN *detector = new PCN(
+                  false,
                  models_dir + "/PCN-1.caffemodel",
                  models_dir + "/PCN-1.prototxt",
                  models_dir + "/PCN-2.caffemodel",

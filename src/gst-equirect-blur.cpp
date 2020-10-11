@@ -6,10 +6,12 @@ GST_DEBUG_CATEGORY_STATIC (gst_equirect_blur_debug);
 enum
 {
   PROP_0,
+  PROP_USE_OPENCL,
   PROP_DRAW_OVER_FACES,
   PROP_MODELS_DIR
 };
 
+#define DEFAULT_USE_OPENCL FALSE
 #define DEFAULT_DRAW_OVER_FACES TRUE
 #define DEFAULT_MODELS_DIR "models"
 
@@ -57,6 +59,12 @@ gst_equirect_blur_class_init (GstEquirectBlurClass * klass)
   gobject_class->set_property = gst_equirect_blur_set_property;
   gobject_class->get_property = gst_equirect_blur_get_property;
 
+  g_object_class_install_property (gobject_class, PROP_USE_OPENCL,
+      g_param_spec_boolean ("use-opencl", "Use OpenCL",
+          "Use OpenCL for inference",
+          DEFAULT_USE_OPENCL,
+          (GParamFlags)(G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS)));
+
   g_object_class_install_property (gobject_class, PROP_DRAW_OVER_FACES,
       g_param_spec_boolean ("draw-over-faces", "Draw over faces",
           "Draw grey rectangles over faces if TRUE. Blur them if FALSE",
@@ -91,6 +99,7 @@ gst_equirect_blur_init (GstEquirectBlur *filter)
 {
   filter->models_dir = g_strdup(DEFAULT_MODELS_DIR);
   filter->draw_over_faces = DEFAULT_DRAW_OVER_FACES;
+  filter->use_opencl = DEFAULT_USE_OPENCL;
 }
 
 static void
@@ -111,6 +120,9 @@ gst_equirect_blur_set_property (GObject * object, guint prop_id,
   GstEquirectBlur *filter = GST_EQUIRECT_BLUR (object);
 
   switch (prop_id) {
+    case PROP_USE_OPENCL:
+      filter->use_opencl = g_value_get_boolean (value);
+      break;
     case PROP_DRAW_OVER_FACES:
       filter->draw_over_faces = g_value_get_boolean (value);
       break;
@@ -133,6 +145,9 @@ gst_equirect_blur_get_property (GObject * object, guint prop_id,
   GstEquirectBlur *filter = GST_EQUIRECT_BLUR (object);
 
   switch (prop_id) {
+    case PROP_USE_OPENCL:
+      g_value_set_boolean (value, filter->use_opencl);
+      break;
     case PROP_DRAW_OVER_FACES:
       g_value_set_boolean (value, filter->draw_over_faces);
       break;
@@ -184,15 +199,30 @@ gst_equirect_blur_prepare_projections (GstEquirectBlur *filter)
       float phi = phi_full <= M_PI/2 ? phi_full : phi_full - M_PI;
 
       for (float lambda = 0; lambda < 2*M_PI; lambda += X_STEP) {
-          PCN *detector = new PCN(
-                 models_dir + "/PCN-1.caffemodel",
-                 models_dir + "/PCN-1.prototxt",
-                 models_dir + "/PCN-2.caffemodel",
-                 models_dir + "/PCN-2.prototxt",
-                 models_dir + "/PCN-2.caffemodel",
-                 models_dir + "/PCN-3.prototxt",
-                 models_dir + "/PCN-Tracking.caffemodel",
-                 models_dir + "/PCN-Tracking.prototxt");
+          PCN *detector;
+          if (filter->use_opencl) {
+            detector = new PCN(
+               filter->use_opencl,
+               models_dir + "/PCN-1.caffemodel",
+               models_dir + "/PCN-1.prototxt",
+               models_dir + "/PCN-2.caffemodel",
+               models_dir + "/PCN-2.prototxt",
+               models_dir + "/PCN-2.caffemodel",
+               models_dir + "/PCN-3.prototxt",
+               models_dir + "/PCN-Tracking.caffemodel",
+               models_dir + "/PCN-Tracking.prototxt");
+          } else {
+            detector = new PCN(
+               filter->use_opencl,
+               models_dir + "/PCN-1.xml",
+               models_dir + "/PCN-1.bin",
+               models_dir + "/PCN-2.xml",
+               models_dir + "/PCN-2.bin",
+               models_dir + "/PCN-3.xml",
+               models_dir + "/PCN-3.bin",
+               models_dir + "/PCN-Tracking.xml",
+               models_dir + "/PCN-Tracking.bin");
+          }
 
           /// detection
           detector->SetMinFaceSize(32);
@@ -206,7 +236,9 @@ gst_equirect_blur_prepare_projections (GstEquirectBlur *filter)
           Projection projection(image_size, apertures, phi, lambda, detector);
 
           #pragma omp critical
-          filter->projections.push_back(projection);
+          {
+            filter->projections.push_back(projection);
+          }
       }
     }
 

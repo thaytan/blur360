@@ -22,6 +22,7 @@ struct _GstEquirectBlur {
   std::vector<Projection> projections;
   cv::Mat cvMat;
 
+  gboolean use_opencl;
   gboolean draw_over_faces;
   gchar *models_dir;
 };
