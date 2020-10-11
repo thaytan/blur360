@@ -49,9 +49,12 @@ int main( int argc, const char** argv )
       float phi = phi_full <= M_PI/2 ? phi_full : phi_full - M_PI;
       for (float lambda = 0; lambda < 2*M_PI; lambda += X_STEP) {
 
-          PCN *detector = new PCN(models_dir + "/PCN.caffemodel",
+          PCN *detector = new PCN(
+                 models_dir + "/PCN-1.caffemodel",
                  models_dir + "/PCN-1.prototxt",
+                 models_dir + "/PCN-2.caffemodel",
                  models_dir + "/PCN-2.prototxt",
+                 models_dir + "/PCN-3.caffemodel",
                  models_dir + "/PCN-3.prototxt",
                  models_dir + "/PCN-Tracking.caffemodel",
                  models_dir + "/PCN-Tracking.prototxt");

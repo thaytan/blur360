@@ -47,7 +47,9 @@ cv::Mat CropFace(cv::Mat img, Window face, int cropSize);
 class PCN
 {
 public:
-    PCN(std::string modelDetect, std::string net1, std::string net2, std::string net3,
+    PCN(std::string model1, std::string net1,
+        std::string model2, std::string net2,
+        std::string model3, std::string net3,
         std::string modelTrack, std::string netTrack);
     /// detection
     void SetMinFaceSize(int minFace);

@@ -15,8 +15,11 @@ struct Window2
 class Impl
 {
 public:
-    void LoadModel(std::string modelDetect, std::string net1, std::string net2, std::string net3,
-                   std::string modelTrack, std::string netTrack);
+    void LoadModel(std::string model1, std::string net1,
+                 std::string model2, std::string net2,
+                 std::string model3, std::string net3,
+                 std::string modelTrack, std::string netTrack);
+
     cv::Mat ResizeImg(cv::Mat img, float scale);
     static bool CompareWin(const Window2 &w1, const Window2 &w2);
     bool Legal(int x, int y, cv::Mat img);
@@ -58,12 +61,14 @@ public:
     std::vector<Window2> m_smoothPreList;
 };
 
-PCN::PCN(std::string modelDetect, std::string net1, std::string net2, std::string net3,
+PCN::PCN(std::string model1, std::string net1,
+         std::string model2, std::string net2,
+         std::string model3, std::string net3,
          std::string modelTrack, std::string netTrack) : impl_(new Impl())
 {
     Impl *p = (Impl *)impl_;
     p->m_minTrackAge = 5;
-    p->LoadModel(modelDetect, net1, net2, net3, modelTrack, netTrack);
+    p->LoadModel(model1, net1, model2, net2, model3, net3, modelTrack, netTrack);
 }
 
 void PCN::SetVideoSmooth(bool stable)
@@ -161,13 +166,15 @@ std::vector<Window> PCN::DetectTrack(cv::Mat img)
     return p->TransWindow(img, imgPad, winList);
 }
 
-void Impl::LoadModel(std::string modelDetect, std::string net1, std::string net2, std::string net3,
+void Impl::LoadModel(std::string model1, std::string net1,
+                     std::string model2, std::string net2,
+                     std::string model3, std::string net3,
                      std::string modelTrack, std::string netTrack)
 {
-    net_[0] = cv::dnn::readNetFromCaffe(net1.c_str(), modelDetect.c_str());
-    net_[1] = cv::dnn::readNetFromCaffe(net2.c_str(), modelDetect.c_str());
-    net_[2] = cv::dnn::readNetFromCaffe(net3.c_str(), modelDetect.c_str());
-    net_[3] = cv::dnn::readNetFromCaffe(netTrack.c_str(), modelTrack.c_str());
+    net_[0] = cv::dnn::readNet(model1.c_str(), net1.c_str());
+    net_[1] = cv::dnn::readNet(model2.c_str(), net2.c_str());
+    net_[2] = cv::dnn::readNet(model3.c_str(), net3.c_str());
+    net_[3] = cv::dnn::readNet(modelTrack.c_str(), netTrack.c_str());
 
 #if 0
     for (int i = 0; i < 4; i++) {
