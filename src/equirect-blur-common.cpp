@@ -244,8 +244,10 @@ blur_face(Projection &projection, cv::Mat img, Window face, bool draw_over_faces
         cv::rectangle(face_img,cv::Point(0,0),cv::Point(dst_size_pixels-1, dst_size_pixels-1),cv::Scalar(64,64,64),-1);
     } else {
         /* blur the face */
-        cv::warpAffine(crop_roi, face_img, rotMat, cv::Size(dst_size_pixels, dst_size_pixels));
-        cv::GaussianBlur(face_img, face_img, cv::Size(31, 31), 10);
+        if (crop_roi.rows != 0 && crop_roi.cols != 0) {
+            cv::warpAffine(crop_roi, face_img, rotMat, cv::Size(dst_size_pixels, dst_size_pixels));
+            cv::GaussianBlur(face_img, face_img, cv::Size(31, 31), 10);
+        }
     }
 #elif 0
     /* Draw GREEN rectangle to obscure the face */
@@ -253,8 +255,10 @@ blur_face(Projection &projection, cv::Mat img, Window face, bool draw_over_faces
 #endif
 
     /* Warp blurred/covered picture back into the source orientation */
-    cv::warpAffine(face_img, crop_roi, rotMat, cv::Size(crop_roi.rows, crop_roi.cols),
+    if (face_img.rows != 0 && face_img.cols != 0) {
+        cv::warpAffine(face_img, crop_roi, rotMat, cv::Size(crop_roi.rows, crop_roi.cols),
             cv::WARP_INVERSE_MAP|cv::INTER_LINEAR, cv::BORDER_TRANSPARENT);
+    }
 
     //imshow("Face", crop_roi);
     //imshow("Face", face_img);
@@ -346,7 +350,7 @@ project_faces_to_full_frame(Projection &projection, cv::Mat &equ_image,
     for (size_t i = 0; i < rects.size(); i++) {
       cv::Rect &rect = rects[i];
 
-      if (rect.width == 0 || rect.height == 0)
+      if (rect.width <= 0 || rect.height <= 0)
           continue;
 
       cv::Mat map = create_roi_map_to_equ(projection, equ_image, cropped_image, rect);
